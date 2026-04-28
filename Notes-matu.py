@@ -5,7 +5,7 @@ from streamlit_local_storage import LocalStorage
 # --- CONFIGURATION ---
 st.set_page_config(page_title="Calculateur Maturité", page_icon="🎓")
 
-# On initialise le stockage une seule fois
+# Initialisation du stockage
 if 'ls' not in st.session_state:
     st.session_state.ls = LocalStorage()
 
@@ -17,13 +17,18 @@ def round_05(val):
 
 st.title("🎓 Calculateur de Maturité")
 
-# --- RÉCUPÉRATION DES DONNÉES ---
-# On récupère tout au début pour éviter les conflits pendant l'affichage
-all_data = st.session_state.ls.getAll(key="get_all_notes")
+# --- RÉCUPÉRATION SÉCURISÉE ---
+try:
+    all_data = st.session_state.ls.getAll(key="get_all_notes")
+except Exception:
+    all_data = None
 
 def get_stored(key_name):
-    if all_data and key_name in all_data:
-        return float(all_data[key_name])
+    if all_data and isinstance(all_data, dict) and key_name in all_data:
+        try:
+            return float(all_data[key_name])
+        except:
+            return 4.0
     return 4.0
 
 # --- BRANCHES MATURITÉ ---
@@ -35,7 +40,7 @@ def section_maturite(nom):
         ecr = c1.number_input(f"{nom} Écrit", 1.0, 6.0, get_stored(f"e{nom}"), 0.1, key=f"in_e{nom}")
         ora = c2.number_input(f"{nom} Oral", 1.0, 6.0, get_stored(f"o{nom}"), 0.1, key=f"in_o{nom}")
         
-        # Sauvegarde immédiate dans le stockage
+        # Sauvegarde
         st.session_state.ls.setItem(f"s1{nom}", s1, key=f"set_s1{nom}")
         st.session_state.ls.setItem(f"s2{nom}", s2, key=f"set_s2{nom}")
         st.session_state.ls.setItem(f"e{nom}", ecr, key=f"set_e{nom}")
@@ -54,7 +59,6 @@ with st.expander("💰 Économie", expanded=True):
     s1c = st.number_input("Compta S1", 1.0, 6.0, get_stored("s1c"), 0.1, key="in_s1c")
     s2c = st.number_input("Compta S2", 1.0, 6.0, get_stored("s2c"), 0.1, key="in_s2c")
     ecrc = st.number_input("Compta Écrit", 1.0, 6.0, get_stored("ecrc"), 0.1, key="in_ecrc")
-    
     st.session_state.ls.setItem("s1c", s1c, key="set_s1c")
     st.session_state.ls.setItem("s2c", s2c, key="set_s2c")
     st.session_state.ls.setItem("ecrc", ecrc, key="set_ecrc")
@@ -62,7 +66,6 @@ with st.expander("💰 Économie", expanded=True):
     s1e = st.number_input("Éco Po S1", 1.0, 6.0, get_stored("s1e"), 0.1, key="in_s1e")
     s2e = st.number_input("Éco Po S2", 1.0, 6.0, get_stored("s2e"), 0.1, key="in_s2e")
     orae = st.number_input("Éco Po Oral", 1.0, 6.0, get_stored("orae"), 0.1, key="in_orae")
-    
     st.session_state.ls.setItem("s1e", s1e, key="set_s1e")
     st.session_state.ls.setItem("s2e", s2e, key="set_s2e")
     st.session_state.ls.setItem("orae", orae, key="set_orae")
@@ -73,7 +76,7 @@ with st.expander("💰 Économie", expanded=True):
     ne = round_01((ae + Decimal(str(orae))) / 2)
     n_eco = round_05((3 * nc + 2 * ne) / 5)
 
-# --- AFFICHAGE ---
+# --- RÉSULTATS ---
 st.divider()
 st.subheader("🏆 Résultats Finaux")
 cols = st.columns(5)
