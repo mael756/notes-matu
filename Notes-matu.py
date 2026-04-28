@@ -1,12 +1,8 @@
 import streamlit as st
 from decimal import Decimal, ROUND_HALF_UP
-from streamlit_local_storage import LocalStorage
 
 # --- CONFIGURATION ---
 st.set_page_config(page_title="Calculateur Maturité", page_icon="🎓")
-
-if 'ls' not in st.session_state:
-    st.session_state.ls = LocalStorage()
 
 def round_01(val):
     return val.quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
@@ -15,64 +11,52 @@ def round_05(val):
     return (val * 2).quantize(Decimal("1"), rounding=ROUND_HALF_UP) / 2
 
 st.title("🎓 Calculateur de Maturité")
+st.info("💡 Tes notes sont dans l'adresse (URL). Copie le lien pour les garder !")
 
-# Récupération initiale des données
-try:
-    all_data = st.session_state.ls.getAll(key="get_all_notes")
-except:
-    all_data = {}
+# --- GESTION DE L'URL (SAUVEGARDE) ---
+query_params = st.query_params
 
-def get_stored(key_name):
-    if all_data and isinstance(all_data, dict) and key_name in all_data:
-        return float(all_data[key_name])
-    return 4.0
+def get_p(key):
+    return float(query_params.get(key, 4.0))
 
-# --- BRANCHES MATURITÉ (Ordre : S1, S2, Écrit, Oral) ---
-def section_maturite(nom):
+# --- BRANCHES MATURITÉ (Ordre respecté) ---
+def section_maturite(nom, k):
     with st.expander(f"📚 {nom}", expanded=True):
         c1, c2 = st.columns(2)
+        s1 = c1.number_input(f"{nom} S1", 1.0, 6.0, get_p(f"{k}s1"), 0.1, key=f"in_{k}s1")
+        s2 = c1.number_input(f"{nom} S2", 1.0, 6.0, get_p(f"{k}s2"), 0.1, key=f"in_{k}s2")
+        ecr = c2.number_input(f"{nom} Écrit", 1.0, 6.0, get_p(f"{k}e"), 0.1, key=f"in_{k}e")
+        ora = c2.number_input(f"{nom} Oral", 1.0, 6.0, get_p(f"{k}o"), 0.1, key=f"in_{k}o")
         
-        # Ligne 1 : Les deux semestres
-        s1 = c1.number_input(f"{nom} S1", 1.0, 6.0, get_stored(f"s1{nom}"), 0.1, key=f"in_s1{nom}")
-        st.session_state.ls.setItem(f"s1{nom}", s1, key=f"set_s1{nom}")
-        
-        s2 = c2.number_input(f"{nom} S2", 1.0, 6.0, get_stored(f"s2{nom}"), 0.1, key=f"in_s2{nom}")
-        st.session_state.ls.setItem(f"s2{nom}", s2, key=f"set_s2{nom}")
-        
-        # Ligne 2 : Écrit et Oral
-        ecr = c1.number_input(f"{nom} Écrit", 1.0, 6.0, get_stored(f"e{nom}"), 0.1, key=f"in_e{nom}")
-        st.session_state.ls.setItem(f"e{nom}", ecr, key=f"set_e{nom}")
-        
-        ora = c2.number_input(f"{nom} Oral", 1.0, 6.0, get_stored(f"o{nom}"), 0.1, key=f"in_o{nom}")
-        st.session_state.ls.setItem(f"o{nom}", ora, key=f"set_o{nom}")
+        # Mise à jour URL
+        st.query_params[f"{k}s1"] = s1
+        st.query_params[f"{k}s2"] = s2
+        st.query_params[f"{k}e"] = ecr
+        st.query_params[f"{k}o"] = ora
         
         ann = round_01((Decimal(str(s1)) + Decimal(str(s2))) / 2)
         return round_05((2 * ann + Decimal(str(ecr)) + Decimal(str(ora))) / 4)
 
-n_fr = section_maturite("Français")
-n_ma = section_maturite("Mathématiques")
-n_al = section_maturite("Allemand")
-n_an = section_maturite("Anglais")
+n_fr = section_maturite("Français", "fr")
+n_ma = section_maturite("Mathématiques", "ma")
+n_al = section_maturite("Allemand", "al")
+n_an = section_maturite("Anglais", "an")
 
-# --- BRANCHE ÉCONOMIE ---
+# --- ÉCONOMIE ---
 with st.expander("💰 Économie", expanded=True):
     col1, col2 = st.columns(2)
+    with col1:
+        st.write("**Compta**")
+        s1c = st.number_input("S1 ", 1.0, 6.0, get_p("cs1"), 0.1, key="ics1")
+        s2c = st.number_input("S2 ", 1.0, 6.0, get_p("cs2"), 0.1, key="ics2")
+        ecrc = st.number_input("Écrit ", 1.0, 6.0, get_p("ce"), 0.1, key="ice")
+    with col2:
+        st.write("**Éco Po**")
+        s1e = st.number_input("S1", 1.0, 6.0, get_p("es1"), 0.1, key="ies1")
+        s2e = st.number_input("S2", 1.0, 6.0, get_p("es2"), 0.1, key="ies2")
+        orae = st.number_input("Oral", 1.0, 6.0, get_p("eo"), 0.1, key="ieo")
     
-    col1.subheader("Compta")
-    s1c = col1.number_input("S1 ", 1.0, 6.0, get_stored("s1c"), 0.1, key="in_s1c")
-    s2c = col1.number_input("S2 ", 1.0, 6.0, get_stored("s2c"), 0.1, key="in_s2c")
-    ecrc = col1.number_input("Écrit ", 1.0, 6.0, get_stored("ecrc"), 0.1, key="in_ecrc")
-    st.session_state.ls.setItem("s1c", s1c, key="set_s1c")
-    st.session_state.ls.setItem("s2c", s2c, key="set_s2c")
-    st.session_state.ls.setItem("ecrc", ecrc, key="set_ecrc")
-
-    col2.subheader("Éco Po")
-    s1e = col2.number_input("S1", 1.0, 6.0, get_stored("s1e"), 0.1, key="in_s1e")
-    s2e = col2.number_input("S2", 1.0, 6.0, get_stored("s2e"), 0.1, key="in_s2e")
-    orae = col2.number_input("Oral", 1.0, 6.0, get_stored("orae"), 0.1, key="in_orae")
-    st.session_state.ls.setItem("s1e", s1e, key="set_s1e")
-    st.session_state.ls.setItem("s2e", s2e, key="set_s2e")
-    st.session_state.ls.setItem("orae", orae, key="set_orae")
+    st.query_params.update({"cs1":s1c,"cs2":s2c,"ce":ecrc,"es1":s1e,"es2":s2e,"eo":orae})
 
     ac = round_01((Decimal(str(s1c)) + Decimal(str(s2c))) / 2)
     nc = round_01((ac + Decimal(str(ecrc))) / 2)
@@ -91,5 +75,5 @@ c[3].metric("AN", f"{n_an}")
 c[4].metric("ECO", f"{n_eco}")
 
 if st.button("Réinitialiser"):
-    st.session_state.ls.deleteAll(key="clear_all")
+    st.query_params.clear()
     st.rerun()
