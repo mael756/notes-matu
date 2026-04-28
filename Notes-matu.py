@@ -5,7 +5,6 @@ from streamlit_local_storage import LocalStorage
 # --- CONFIGURATION ---
 st.set_page_config(page_title="Calculateur Maturité", page_icon="🎓")
 
-# Initialisation du stockage
 if 'ls' not in st.session_state:
     st.session_state.ls = LocalStorage()
 
@@ -17,33 +16,34 @@ def round_05(val):
 
 st.title("🎓 Calculateur de Maturité")
 
-# --- RÉCUPÉRATION SÉCURISÉE ---
+# Récupération initiale des données
 try:
     all_data = st.session_state.ls.getAll(key="get_all_notes")
-except Exception:
-    all_data = None
+except:
+    all_data = {}
 
 def get_stored(key_name):
     if all_data and isinstance(all_data, dict) and key_name in all_data:
-        try:
-            return float(all_data[key_name])
-        except:
-            return 4.0
+        return float(all_data[key_name])
     return 4.0
 
-# --- BRANCHES MATURITÉ ---
+# --- BRANCHES MATURITÉ (Ordre : S1, S2, Écrit, Oral) ---
 def section_maturite(nom):
     with st.expander(f"📚 {nom}", expanded=True):
         c1, c2 = st.columns(2)
-        s1 = c1.number_input(f"{nom} S1", 1.0, 6.0, get_stored(f"s1{nom}"), 0.1, key=f"in_s1{nom}")
-        s2 = c2.number_input(f"{nom} S2", 1.0, 6.0, get_stored(f"s2{nom}"), 0.1, key=f"in_s2{nom}")
-        ecr = c1.number_input(f"{nom} Écrit", 1.0, 6.0, get_stored(f"e{nom}"), 0.1, key=f"in_e{nom}")
-        ora = c2.number_input(f"{nom} Oral", 1.0, 6.0, get_stored(f"o{nom}"), 0.1, key=f"in_o{nom}")
         
-        # Sauvegarde
+        # Ligne 1 : Les deux semestres
+        s1 = c1.number_input(f"{nom} S1", 1.0, 6.0, get_stored(f"s1{nom}"), 0.1, key=f"in_s1{nom}")
         st.session_state.ls.setItem(f"s1{nom}", s1, key=f"set_s1{nom}")
+        
+        s2 = c2.number_input(f"{nom} S2", 1.0, 6.0, get_stored(f"s2{nom}"), 0.1, key=f"in_s2{nom}")
         st.session_state.ls.setItem(f"s2{nom}", s2, key=f"set_s2{nom}")
+        
+        # Ligne 2 : Écrit et Oral
+        ecr = c1.number_input(f"{nom} Écrit", 1.0, 6.0, get_stored(f"e{nom}"), 0.1, key=f"in_e{nom}")
         st.session_state.ls.setItem(f"e{nom}", ecr, key=f"set_e{nom}")
+        
+        ora = c2.number_input(f"{nom} Oral", 1.0, 6.0, get_stored(f"o{nom}"), 0.1, key=f"in_o{nom}")
         st.session_state.ls.setItem(f"o{nom}", ora, key=f"set_o{nom}")
         
         ann = round_01((Decimal(str(s1)) + Decimal(str(s2))) / 2)
@@ -54,18 +54,22 @@ n_ma = section_maturite("Mathématiques")
 n_al = section_maturite("Allemand")
 n_an = section_maturite("Anglais")
 
-# --- ÉCONOMIE ---
+# --- BRANCHE ÉCONOMIE ---
 with st.expander("💰 Économie", expanded=True):
-    s1c = st.number_input("Compta S1", 1.0, 6.0, get_stored("s1c"), 0.1, key="in_s1c")
-    s2c = st.number_input("Compta S2", 1.0, 6.0, get_stored("s2c"), 0.1, key="in_s2c")
-    ecrc = st.number_input("Compta Écrit", 1.0, 6.0, get_stored("ecrc"), 0.1, key="in_ecrc")
+    col1, col2 = st.columns(2)
+    
+    col1.subheader("Compta")
+    s1c = col1.number_input("S1 ", 1.0, 6.0, get_stored("s1c"), 0.1, key="in_s1c")
+    s2c = col1.number_input("S2 ", 1.0, 6.0, get_stored("s2c"), 0.1, key="in_s2c")
+    ecrc = col1.number_input("Écrit ", 1.0, 6.0, get_stored("ecrc"), 0.1, key="in_ecrc")
     st.session_state.ls.setItem("s1c", s1c, key="set_s1c")
     st.session_state.ls.setItem("s2c", s2c, key="set_s2c")
     st.session_state.ls.setItem("ecrc", ecrc, key="set_ecrc")
 
-    s1e = st.number_input("Éco Po S1", 1.0, 6.0, get_stored("s1e"), 0.1, key="in_s1e")
-    s2e = st.number_input("Éco Po S2", 1.0, 6.0, get_stored("s2e"), 0.1, key="in_s2e")
-    orae = st.number_input("Éco Po Oral", 1.0, 6.0, get_stored("orae"), 0.1, key="in_orae")
+    col2.subheader("Éco Po")
+    s1e = col2.number_input("S1", 1.0, 6.0, get_stored("s1e"), 0.1, key="in_s1e")
+    s2e = col2.number_input("S2", 1.0, 6.0, get_stored("s2e"), 0.1, key="in_s2e")
+    orae = col2.number_input("Oral", 1.0, 6.0, get_stored("orae"), 0.1, key="in_orae")
     st.session_state.ls.setItem("s1e", s1e, key="set_s1e")
     st.session_state.ls.setItem("s2e", s2e, key="set_s2e")
     st.session_state.ls.setItem("orae", orae, key="set_orae")
@@ -79,12 +83,12 @@ with st.expander("💰 Économie", expanded=True):
 # --- RÉSULTATS ---
 st.divider()
 st.subheader("🏆 Résultats Finaux")
-cols = st.columns(5)
-cols[0].metric("FR", f"{n_fr}")
-cols[1].metric("MA", f"{n_ma}")
-cols[2].metric("AL", f"{n_al}")
-cols[3].metric("AN", f"{n_an}")
-cols[4].metric("ECO", f"{n_eco}")
+c = st.columns(5)
+c[0].metric("FR", f"{n_fr}")
+c[1].metric("MA", f"{n_ma}")
+c[2].metric("AL", f"{n_al}")
+c[3].metric("AN", f"{n_an}")
+c[4].metric("ECO", f"{n_eco}")
 
 if st.button("Réinitialiser"):
     st.session_state.ls.deleteAll(key="clear_all")
